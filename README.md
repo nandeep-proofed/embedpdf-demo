@@ -67,16 +67,16 @@ and sticky note all round-tripped with author "Proofed".
 
 The creative portal saves an editor's own marks as JSON every few
 seconds (the `PdfAnnotations` content version) and replays them if the
-job is reopened after a crash. The three numbered buttons do the same
-with EmbedPDF:
+job is reopened after a crash. The demo does the same with EmbedPDF:
 
-1. **Export draft (JSON)**: `exportAnnotations()`, filtered to the
-   current author, wrapped in a versioned envelope, saved to local
-   storage and downloaded as `pdf-annotations-draft.json`.
-2. **Reload clean PDF**: reopens the untouched sample, so the page
-   shows zero marks.
-3. **Restore draft**: `importAnnotations()` with the saved items, then
-   `commit()`. The marks reappear with the same author and text.
+1. **Export draft (JSON)** (header button): `exportAnnotations()`,
+   filtered to the current author, wrapped in a versioned envelope,
+   saved to local storage and downloaded as `pdf-annotations-draft.json`.
+2. **Reload clean PDF** and **Restore draft** are hidden in the header
+   for now (remove the `hidden` attribute in `index.html` to show them).
+   Restore runs `importAnnotations()` with the saved items, then
+   `commit()`, and the marks reappear with the same author and text. A
+   `?draft=` link runs it automatically after the conversion below.
 
 Verified on 15 Oct 2026: a Replace mark (caret plus grouped strikeout)
 and a sticky note exported, the clean file reloaded with zero marks,
@@ -114,7 +114,7 @@ git-ignored, so real files never reach the repo), and open:
 http://localhost:5180/?author=Reviewer&src=/order21776/14563-EditedCopyInternal-job27548.pdf&draft=/order21776/14566-PdfAnnotations-job27549.json
 ```
 
-Then click **3. Restore draft**. Verified on 15 Oct 2026: the three
+The draft is converted and restored on load. Verified on 15 Oct 2026: the three
 Reviewer marks land on the same words, with the same author, text and
 dates, as in the file the reviewer actually submitted (14567). Rects
 differ by under 3 points because Adobe pads its saved rectangle.

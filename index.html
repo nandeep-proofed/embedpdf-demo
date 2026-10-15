@@ -14,7 +14,7 @@
       }
       header h1 { font-size: 15px; margin: 0 16px 0 0; font-weight: 600; }
       header label { display: flex; gap: 6px; align-items: center; font-size: 13px; }
-      header label[hidden] { display: none; }
+      header label[hidden], header button[hidden] { display: none; }
       header input[type="text"] { padding: 4px 8px; border-radius: 4px; border: 1px solid #9ca3af; }
       header input[type="file"] { font-size: 13px; }
       header button {
@@ -36,9 +36,10 @@
       <button id="sample">Load sample PDF</button>
       <button id="download" disabled>Download annotated PDF</button>
       <span class="divider"></span>
-      <button id="export" disabled>1. Export draft (JSON)</button>
-      <button id="reload" disabled>2. Reload clean PDF</button>
-      <button id="restore" disabled>3. Restore draft</button>
+      <button id="export" disabled>Export draft (JSON)</button>
+      <!-- Hidden for now; a ?draft= link restores on its own. -->
+      <button id="reload" disabled hidden>Reload clean PDF</button>
+      <button id="restore" disabled hidden>Restore draft</button>
       <span id="status">No document loaded</span>
     </header>
     <div id="pdf-viewer"></div>

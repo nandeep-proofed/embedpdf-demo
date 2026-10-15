@@ -401,7 +401,7 @@ const loadAdobeDraft = async (url) => {
   restoreButton.disabled = false;
   console.log("[embedpdf] converted Adobe draft", adobeDraft, "->", draft);
   setStatus(
-    `Converted Adobe draft: ${draft.annotations.length} of ${adobeDraft.annotations.length} marks by "${draft.author}" ready. Click 3. Restore draft.`
+    `Converted Adobe draft: ${draft.annotations.length} of ${adobeDraft.annotations.length} marks by "${draft.author}" converted, restoring...`
   );
 };
 
@@ -414,5 +414,6 @@ if (params.get("draft")) {
     });
   waitForDocument()
     .then(() => loadAdobeDraft(params.get("draft")))
+    .then(() => restoreDraft())
     .catch((error) => setStatus(`Draft load failed: ${error.message ?? error}`));
 }
