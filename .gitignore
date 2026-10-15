@@ -1,0 +1,5 @@
+node_modules
+dist
+
+# Real order files from b2btest stay local only.
+public/order*/
