@@ -1,6 +1,8 @@
 import EmbedPDF from "@embedpdf/snippet";
 import wasmPath from "@embedpdf/snippet/dist/pdfium.wasm?url";
 
+import { DRAFT_VERSION, convertAdobeDraft } from "./adobe-draft-converter.ts";
+
 // The engine runs in a blob: worker, so a root-relative path cannot resolve.
 const wasmUrl = new URL(wasmPath, window.location.origin).href;
 
@@ -188,7 +190,6 @@ viewer.registry.then((registry) => {
 // check the marks come back.
 // ---------------------------------------------------------------------
 
-const DRAFT_VERSION = 2;
 const DRAFT_STORAGE_KEY = "embedpdf-demo.draft";
 
 const exportButton = document.getElementById("export");
@@ -309,99 +310,33 @@ new MutationObserver(() => {
 
 // ---------------------------------------------------------------------
 // Old-format drafts. The portal's PdfAnnotations version (payload
-// version 1) holds Adobe's W3C Web Annotation shape. This converts the
-// mark types Adobe Embed can write into EmbedPDF objects so a job that
-// was mid-flight at the switch-over can still get its draft back.
+// version 1) holds Adobe's W3C Web Annotation shape. The converter in
+// adobe-draft-converter.ts (shared with the command-line script) turns
+// it into EmbedPDF objects so a job that was mid-flight at the
+// switch-over can still get its draft back. A version 2 draft, such as
+// the script's output, is used as is.
 //   ?draft=/order21776/14566-PdfAnnotations-job27549.json
 // ---------------------------------------------------------------------
-
-const ADOBE_SUBTYPE_TO_TYPE = {
-  highlight: 9,
-  underline: 10,
-  squiggly: 11,
-  strikeout: 12,
-  note: 1,
-  freetext: 3
-};
-
-// Adobe: PDF points, origin bottom-left, box as [x1, y1, x2, y2].
-// EmbedPDF: PDF points, origin top-left, box as origin + size.
-const flipBox = ([x1, y1, x2, y2], pageHeight) => ({
-  origin: { x: x1, y: pageHeight - y2 },
-  size: { width: x2 - x1, height: y2 - y1 }
-});
-
-const quadsToRects = (quads, pageHeight) => {
-  const rects = [];
-  for (let index = 0; index + 7 < quads.length; index += 8) {
-    const xs = [quads[index], quads[index + 2], quads[index + 4], quads[index + 6]];
-    const ys = [quads[index + 1], quads[index + 3], quads[index + 5], quads[index + 7]];
-    rects.push(flipBox([Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)], pageHeight));
-  }
-  return rects;
-};
-
-const convertAdobeAnnotation = (adobe, pageHeights) => {
-  const selector = adobe.target?.selector ?? {};
-  const type = ADOBE_SUBTYPE_TO_TYPE[selector.subtype];
-  const pageIndex = selector.node?.index ?? 0;
-  const pageHeight = pageHeights[pageIndex];
-  if (!type || !selector.boundingBox || pageHeight === undefined) {
-    console.warn("[embedpdf] skipped Adobe mark", selector.subtype, adobe.id);
-    return null;
-  }
-  const base = {
-    id: adobe.id,
-    type,
-    pageIndex,
-    rect: flipBox(selector.boundingBox, pageHeight),
-    author: adobe.creator?.name,
-    contents: adobe.bodyValue ?? "",
-    created: adobe.created ? new Date(adobe.created) : undefined,
-    modified: adobe.modified ? new Date(adobe.modified) : undefined,
-    opacity: selector.opacity ?? 1
-  };
-  if (type === 1) {
-    return { ...base, color: selector.strokeColor ?? "#FFC100", rect: { ...base.rect, size: { width: 24, height: 24 } } };
-  }
-  if (type === 3) {
-    return { ...base, fontFamily: 0, fontSize: 12, fontColor: selector.strokeColor ?? "#000000", textAlign: 0, verticalAlign: 0 };
-  }
-  return {
-    ...base,
-    color: selector.strokeColor,
-    strokeColor: selector.strokeColor,
-    segmentRects: selector.quadPoints ? quadsToRects(selector.quadPoints, pageHeight) : [base.rect]
-  };
-};
-
-const convertAdobeDraft = (adobeDraft, pageHeights) => {
-  const converted = adobeDraft.annotations
-    .map((entry) => convertAdobeAnnotation(entry.annotation, pageHeights))
-    .filter(Boolean);
-  return {
-    version: DRAFT_VERSION,
-    author: converted[0]?.author ?? "Proofed",
-    savedAt: adobeDraft.savedAt,
-    convertedFrom: { version: adobeDraft.version, jobId: adobeDraft.jobId, seedVersionId: adobeDraft.seedVersionId },
-    annotations: converted.map((object) => ({ page: object.pageIndex, annotation: object }))
-  };
-};
 
 const loadAdobeDraft = async (url) => {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`${url}: ${response.status}`);
-  const adobeDraft = await response.json();
-  if (adobeDraft.version !== 1) throw new Error(`Expected a version 1 (Adobe) draft, got ${adobeDraft.version}`);
+  const loaded = await response.json();
+  if (loaded.version === DRAFT_VERSION) {
+    localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(loaded));
+    restoreButton.disabled = false;
+    setStatus(`EmbedPDF draft: ${loaded.annotations.length} marks by "${loaded.author}", restoring...`);
+    return;
+  }
   const documentManager = await getCapability("document-manager");
   const pages = documentManager.getActiveDocument()?.pages ?? [];
   const pageHeights = pages.map((page) => page.size.height);
-  const draft = convertAdobeDraft(adobeDraft, pageHeights);
+  const { draft, skipped } = convertAdobeDraft(loaded, pageHeights);
   localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
   restoreButton.disabled = false;
-  console.log("[embedpdf] converted Adobe draft", adobeDraft, "->", draft);
+  console.log("[embedpdf] converted Adobe draft", loaded, "->", draft, "skipped", skipped);
   setStatus(
-    `Converted Adobe draft: ${draft.annotations.length} of ${adobeDraft.annotations.length} marks by "${draft.author}" converted, restoring...`
+    `Converted Adobe draft: ${draft.annotations.length} of ${loaded.annotations.length} marks by "${draft.author}" converted, restoring...`
   );
 };
 
