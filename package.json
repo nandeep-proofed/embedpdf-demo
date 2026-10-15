@@ -7,7 +7,7 @@
     "dev": "vite --host --port 5180",
     "build": "vite build",
     "preview": "vite preview --port 5180",
-    "convert": "node convert-adobe-draft.ts"
+    "convert": "node --env-file-if-exists=.env convert-adobe-draft.ts"
   },
   "dependencies": {
     "@embedpdf/snippet": "2.15.1"

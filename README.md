@@ -125,21 +125,25 @@ The same converter runs from the terminal, for checking or migrating
 stored drafts without opening the browser:
 
 ```bash
-npm run convert -- --adobe <PdfAnnotations.json> --pdf <seed.pdf> [--out <file.json>]
-# or: node convert-adobe-draft.ts --adobe ... --pdf ...
+cp .env.example .env     # once: fill in OMS_API_KEY and OMS_REQUESTER_ID
+npm run convert -- --adobe <PdfAnnotations.json>
 ```
 
 `--adobe` is the PdfAnnotations content version (the blob is JSON even
-though OMS names it `.pdf`). `--pdf` is the document the draft was made
-on: the seed version id inside the JSON, which is the order's Original
-for the first job and the previous job's EditedCopyInternal after that.
-It is read only for its page heights, which the coordinate flip needs.
-The output, `<name>-embedpdf.json` next to the input unless `--out` is
-given, is a version 2 draft that the page restores as is through
-`?draft=`. Skipped marks (the pen `shape` type, or a page missing from
-the PDF) are listed on stderr; a version 2 file passed as input is
-rejected. Both the page and the script import `adobe-draft-converter.ts`,
-so they cannot drift apart. Node 22 runs the TypeScript directly.
+though OMS names it `.pdf`). The coordinate flip needs each page's
+height, which the Adobe draft does not carry, so the script reads it
+from the PDF the draft was made on: the seed version named inside the
+JSON (the order's Original for the first job, the previous job's
+EditedCopyInternal after that). With the credentials in `.env` the
+script downloads that seed from OMS by itself and keeps it next to the
+JSON as `seed-<version>.pdf`; alternatively pass the file with
+`--pdf <seed.pdf>`. The output, `<name>-embedpdf.json` next to the input
+unless `--out` is given, is a version 2 draft that the page restores as
+is through `?draft=`. Skipped marks (the pen `shape` type, or a page
+missing from the PDF) are listed on stderr; a version 2 file passed as
+input is rejected. Both the page and the script import
+`adobe-draft-converter.ts`, so they cannot drift apart. Node 22 runs
+the TypeScript directly; `.env` is git-ignored.
 
 Adobe's freehand `shape` marks are not converted. If the switch-over has
 to preserve those too, add an ink mapping; otherwise schedule it for a

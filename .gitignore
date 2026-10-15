@@ -3,3 +3,6 @@ dist
 
 # Real order files from b2btest stay local only.
 public/order*/
+
+# OMS credentials for convert-adobe-draft.ts stay local only.
+.env
